@@ -1,0 +1,40 @@
+{
+  "name": "pi-context",
+  "version": "1.0.0",
+  "description": "Complete context stack for pi — persistent memory, session history search, and local knowledge search in one install.",
+  "keywords": [
+    "pi-package",
+    "extension",
+    "memory",
+    "context",
+    "session-search",
+    "knowledge-search",
+    "semantic-search"
+  ],
+  "author": "Sam Painter",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samfoy/pi-context"
+  },
+  "dependencies": {
+    "@samfp/pi-memory": "^1.0.0",
+    "pi-session-search": "^1.0.0",
+    "pi-knowledge-search": "^1.0.0"
+  },
+  "bundledDependencies": [
+    "@samfp/pi-memory",
+    "pi-session-search",
+    "pi-knowledge-search"
+  ],
+  "pi": {
+    "extensions": [
+      "node_modules/@samfp/pi-memory/src/index.ts",
+      "node_modules/pi-session-search/src/index.ts",
+      "node_modules/pi-knowledge-search/src/index.ts"
+    ],
+    "skills": [
+      "node_modules/pi-session-search/skills"
+    ]
+  }
+}
