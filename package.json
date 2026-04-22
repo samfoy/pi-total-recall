@@ -1,5 +1,5 @@
 {
-  "name": "pi-context",
+  "name": "pi-recall",
   "version": "1.0.0",
   "description": "Complete context stack for pi — persistent memory, session history search, and local knowledge search in one install.",
   "keywords": [
@@ -15,7 +15,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samfoy/pi-context"
+    "url": "https://github.com/samfoy/pi-recall"
   },
   "dependencies": {
     "@samfp/pi-memory": "^1.0.0",

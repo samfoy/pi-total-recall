@@ -1,4 +1,4 @@
-# pi-context
+# pi-recall
 
 Complete context stack for [pi](https://github.com/badlogic/pi-mono). One install gives your agent persistent memory, session history, and local knowledge search.
 
@@ -19,7 +19,7 @@ Together, these give pi three layers of context about you:
 ## Install
 
 ```bash
-pi install pi-context
+pi install pi-recall
 ```
 
 That's it. All three extensions are active immediately.
