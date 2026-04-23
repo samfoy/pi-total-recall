@@ -1,0 +1,81 @@
+name: Auto-update bundled dependencies
+
+on:
+  schedule:
+    # Daily at 8am UTC
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check for updates
+        id: check
+        run: |
+          # Capture versions before update
+          before=$(node -e "
+            const deps = ['@samfp/pi-memory', 'pi-session-search', 'pi-knowledge-search'];
+            const versions = deps.map(d => {
+              try { return d + '@' + require(d + '/package.json').version; }
+              catch { return d + '@missing'; }
+            });
+            console.log(versions.join(','));
+          ")
+
+          npm update @samfp/pi-memory pi-session-search pi-knowledge-search
+
+          # Capture versions after update
+          after=$(node -e "
+            const deps = ['@samfp/pi-memory', 'pi-session-search', 'pi-knowledge-search'];
+            const versions = deps.map(d => {
+              try { return d + '@' + require(d + '/package.json').version; }
+              catch { return d + '@missing'; }
+            });
+            console.log(versions.join(','));
+          ")
+
+          echo "before=$before" >> "$GITHUB_OUTPUT"
+          echo "after=$after" >> "$GITHUB_OUTPUT"
+
+          if [ "$before" != "$after" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Dependencies updated: $before → $after"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No updates found"
+          fi
+
+      - name: Bump version and publish
+        if: steps.check.outputs.changed == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm version patch --no-git-tag-version
+          npm publish
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Published pi-total-recall@$VERSION"
+
+      - name: Commit and push
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: bump to $VERSION, update bundled deps
+
+          ${{ steps.check.outputs.before }} → ${{ steps.check.outputs.after }}"
+          git push
