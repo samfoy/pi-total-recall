@@ -1,6 +1,6 @@
 {
   "name": "pi-total-recall",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Complete context stack for pi — persistent memory, session history search, and local knowledge search in one install.",
   "keywords": [
     "pi-package",
