@@ -18,7 +18,7 @@
     "url": "https://github.com/samfoy/pi-total-recall"
   },
   "dependencies": {
-    "@samfp/pi-memory": "^1.0.0",
+    "@samfp/pi-memory": "^1.0.1",
     "pi-session-search": "^1.0.0",
     "pi-knowledge-search": "^1.0.0"
   },
