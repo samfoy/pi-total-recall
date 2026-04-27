@@ -19,7 +19,7 @@ Together, these give pi three layers of context about you:
 ## Install
 
 ```bash
-pi install pi-total-recall
+pi install npm:pi-total-recall
 ```
 
 That's it. All three extensions are active immediately.
