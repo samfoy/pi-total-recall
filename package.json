@@ -1,6 +1,6 @@
 {
   "name": "pi-total-recall",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Complete context stack for pi — persistent memory, session history search, and local knowledge search in one install.",
   "keywords": [
     "pi-package",
@@ -20,7 +20,7 @@
   "dependencies": {
     "@samfp/pi-memory": "^1.0.2",
     "pi-session-search": "^1.0.0",
-    "pi-knowledge-search": "^1.0.0"
+    "pi-knowledge-search": "^1.0.2"
   },
   "bundledDependencies": [
     "@samfp/pi-memory",
