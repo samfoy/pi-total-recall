@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@samfp/pi-memory": "^1.0.2",
-    "pi-session-search": "^1.0.0",
+    "pi-session-search": "^1.1.0",
     "pi-knowledge-search": "^1.1.0"
   },
   "bundledDependencies": [
