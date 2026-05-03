@@ -79,6 +79,58 @@ Point it at your notes directory:
 
 Works out of the box — indexes your existing pi sessions automatically.
 
+## Project-local storage
+
+By default, all three components write to user-global locations under `~/.pi/` — which is usually what you want, because memory, sessions, and a notes index are normally global across projects.
+
+If you want a project's memory/index to be isolated — e.g. a throwaway prototype, a client repo, or an experimental agent setup — drop a `pi-total-recall.localPath` key into `{project}/.pi/settings.json`:
+
+```jsonc
+{
+  "pi-total-recall": {
+    "localPath": ".pi/total-recall"
+  }
+}
+```
+
+That single key cascades to all three packages:
+
+| Package | Cascaded path |
+|---------|---------------|
+| `@samfp/pi-memory` | `{project}/.pi/total-recall/memory/memory.db` |
+| `pi-session-search` | `{project}/.pi/total-recall/session-search/` |
+| `pi-knowledge-search` | `{project}/.pi/total-recall/knowledge-search/` |
+
+You can also override any single package independently — package-specific keys win over the cascade:
+
+```jsonc
+{
+  "pi-total-recall": { "localPath": ".pi/total-recall" },
+  "pi-knowledge-search": {
+    "localPath": "/some/other/path"   // overrides just this one
+  }
+}
+```
+
+**Resolution order (highest priority first) for every package:**
+
+1. Package-specific env vars (`KNOWLEDGE_SEARCH_CONFIG`, etc.)
+2. `pi-<package>.localPath` in `{cwd}/.pi/settings.json`
+3. `pi-total-recall.localPath` cascade
+4. Global default under `~/.pi/`
+
+### Caveat: session-search source stays global
+
+`pi-session-search` relocates only its own config and index — the session *source* directories (`~/.pi/agent/sessions`, `~/.pi/agent/sessions-archive`) are pi's own files and remain global. That's where pi writes sessions, so making them project-local would point the tool at an empty directory. Use the `project` filter on `session_search` and `session_list` if you want to scope results to one project.
+
+### Cleanup
+
+When using `pi-total-recall.localPath`:
+
+```bash
+rm -rf {project}/.pi/total-recall   # nukes memory, session-search config+index, knowledge-search config+index
+```
+
 ## Individual packages
 
 If you only want one or two components, install them directly:

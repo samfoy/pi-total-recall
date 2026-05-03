@@ -13,6 +13,12 @@
   ],
   "author": "Sam Painter",
   "license": "MIT",
+  "scripts": {
+    "test": "node --test --import tsx test/**/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/samfoy/pi-total-recall"
