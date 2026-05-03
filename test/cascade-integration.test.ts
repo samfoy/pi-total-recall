@@ -18,14 +18,12 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Resolve modules from the in-development source trees so we test the
-// actual patched code rather than whatever was last bundled into
-// node_modules. Once sub-packages are published, this can switch to
-// node_modules paths.
-const MONOREPO = path.resolve(__dirname, "..", "..");
-const MEMORY_MOD = path.join(MONOREPO, "pi-memory/src/index.ts");
-const SESSION_MOD = path.join(MONOREPO, "pi-session-search/src/config.ts");
-const KNOWLEDGE_MOD = path.join(MONOREPO, "pi-knowledge-search/src/config.ts");
+// Resolve modules from the bundled sub-packages so we test exactly
+// what ships with this package.
+const PKG_ROOT = path.resolve(__dirname, "..");
+const MEMORY_MOD = path.join(PKG_ROOT, "node_modules/@samfp/pi-memory/src/index.ts");
+const SESSION_MOD = path.join(PKG_ROOT, "node_modules/pi-session-search/src/config.ts");
+const KNOWLEDGE_MOD = path.join(PKG_ROOT, "node_modules/pi-knowledge-search/src/config.ts");
 
 let resolveDbPath: (cwd: string) => string;
 let ksGetConfigPath: (cwd?: string) => string;
@@ -44,10 +42,10 @@ function writeProjectSettings(obj: Record<string, unknown>): void {
 
 describe("pi-total-recall cascade integration", () => {
   before(async () => {
-    // Confirm the sibling source trees are present and exporting the right symbols.
-    assert.ok(fs.existsSync(MEMORY_MOD), `pi-memory source not found at: ${MEMORY_MOD}`);
-    assert.ok(fs.existsSync(SESSION_MOD), `pi-session-search source not found at: ${SESSION_MOD}`);
-    assert.ok(fs.existsSync(KNOWLEDGE_MOD), `pi-knowledge-search source not found at: ${KNOWLEDGE_MOD}`);
+    // Confirm the bundled sub-packages are present and exporting the right symbols.
+    assert.ok(fs.existsSync(MEMORY_MOD), `pi-memory source not bundled: ${MEMORY_MOD}`);
+    assert.ok(fs.existsSync(SESSION_MOD), `pi-session-search source not bundled: ${SESSION_MOD}`);
+    assert.ok(fs.existsSync(KNOWLEDGE_MOD), `pi-knowledge-search source not bundled: ${KNOWLEDGE_MOD}`);
 
     const memMod: any = await import(MEMORY_MOD);
     resolveDbPath = memMod.resolveDbPath;
