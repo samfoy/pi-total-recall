@@ -24,6 +24,8 @@ pi install npm:pi-total-recall
 
 That's it. All three extensions are active immediately.
 
+> **Requires Node 24+.** `pi-session-search` and `pi-knowledge-search` use SQLite FTS5 via `node:sqlite`, which is compiled into Node 24 but not Node 22. On Node 22 you'll see `Error: no such table: sessions` at startup — upgrade Node and restart pi.
+
 ## Tools
 
 After installing, your agent gets these tools:
