@@ -95,6 +95,10 @@ If you want a project's memory/index to be isolated — e.g. a throwaway prototy
 }
 ```
 
+**Path resolution:** relative paths are resolved against the project root (where you run `pi`), not the `.pi/` directory. So `".pi/total-recall"` above resolves to `{project}/.pi/total-recall/`, and `"./data"` would resolve to `{project}/data/`. Use an absolute path (e.g. `"/Users/you/shared-index"`) if you want to pin outside the project.
+
+The key is case-sensitive (`localPath`, lowercase `l`). A misspelled key like `LocalPath` is silently ignored — v1.3.2+ of the bundled packages will log a `console.error` warning when this happens.
+
 That single key cascades to all three packages:
 
 | Package | Cascaded path |
