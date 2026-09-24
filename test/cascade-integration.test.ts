@@ -19,9 +19,10 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Resolve modules from the bundled sub-packages so we test exactly
-// what ships with this package.
+// what ships with this package. pi-memory's built entry exports resolveDbPath;
+// the other two only export their config helpers from src/config.ts.
 const PKG_ROOT = path.resolve(__dirname, "..");
-const MEMORY_MOD = path.join(PKG_ROOT, "node_modules/@samfp/pi-memory/src/index.ts");
+const MEMORY_MOD = path.join(PKG_ROOT, "node_modules/@samfp/pi-memory/dist/index.js");
 const SESSION_MOD = path.join(PKG_ROOT, "node_modules/pi-session-search/src/config.ts");
 const KNOWLEDGE_MOD = path.join(PKG_ROOT, "node_modules/pi-knowledge-search/src/config.ts");
 
@@ -43,7 +44,7 @@ function writeProjectSettings(obj: Record<string, unknown>): void {
 describe("pi-total-recall cascade integration", () => {
   before(async () => {
     // Confirm the bundled sub-packages are present and exporting the right symbols.
-    assert.ok(fs.existsSync(MEMORY_MOD), `pi-memory source not bundled: ${MEMORY_MOD}`);
+    assert.ok(fs.existsSync(MEMORY_MOD), `pi-memory entry not bundled: ${MEMORY_MOD}`);
     assert.ok(fs.existsSync(SESSION_MOD), `pi-session-search source not bundled: ${SESSION_MOD}`);
     assert.ok(fs.existsSync(KNOWLEDGE_MOD), `pi-knowledge-search source not bundled: ${KNOWLEDGE_MOD}`);
 
