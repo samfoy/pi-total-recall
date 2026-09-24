@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      # Lockfiles generated behind a local proxy or CodeArtifact leak unreachable URLs.
+      - name: Lockfile resolves only from registry.npmjs.org
+        run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
+      - run: npm ci
+      - run: npm test
+      - name: Tarball ships every pi manifest path and no pi peers
+        run: npm run check:pack
+      - run: npm pack --dry-run

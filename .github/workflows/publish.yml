@@ -1,0 +1,104 @@
+name: Publish
+
+# npm trusted publishing (OIDC): no NPM_TOKEN secret. The npm-side trust
+# relationship is keyed on this file name (publish.yml) + environment "npm".
+#
+# - release: a GitHub release publishes the tagged version.
+# - schedule / workflow_dispatch: when a bundled component has a newer release, bump the
+#   deps and patch version, verify, commit + tag, and publish in this same run. A tag pushed
+#   with GITHUB_TOKEN triggers no other workflow, which is why both paths live in one file.
+#   If the publish step fails after the push, create a GitHub release for that tag to retry.
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
+      - name: Tag matches package.json version
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
+      - name: Lockfile resolves only from registry.npmjs.org
+        run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
+      - run: npm ci
+      - run: npm test
+      - name: Tarball ships every pi manifest path and no pi peers
+        run: npm run check:pack
+      - run: npm publish --access public
+
+  refresh:
+    if: github.event_name != 'release' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
+      - name: Look for newer bundled component releases
+        id: check
+        run: node scripts/refresh-deps.mjs >> "$GITHUB_OUTPUT"
+      - name: Nothing to publish
+        if: steps.check.outputs.specs == ''
+        run: echo "Bundled components are current; nothing to publish."
+      - name: Bump components, lockfile, patch version and changelog
+        if: steps.check.outputs.specs != ''
+        env:
+          SPECS: ${{ steps.check.outputs.specs }}
+        run: |
+          npm install --save $SPECS
+          npm update
+          npm version patch --no-git-tag-version
+          node scripts/changelog-entry.mjs "Bundle ${SPECS// /, }."
+          git diff --stat
+      - name: Lockfile resolves only from registry.npmjs.org
+        if: steps.check.outputs.specs != ''
+        run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
+      - if: steps.check.outputs.specs != ''
+        run: npm ci
+      - if: steps.check.outputs.specs != ''
+        run: npm test
+      - name: Tarball ships every pi manifest path and no pi peers
+        if: steps.check.outputs.specs != ''
+        run: npm run check:pack
+      - name: Commit, tag and push
+        if: steps.check.outputs.specs != ''
+        env:
+          SPECS: ${{ steps.check.outputs.specs }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(deps): bundle $SPECS, release $version"
+          git tag "v$version"
+          git push origin HEAD:main "v$version"
+      - if: steps.check.outputs.specs != ''
+        run: npm publish --access public
