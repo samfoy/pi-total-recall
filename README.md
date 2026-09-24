@@ -4,11 +4,14 @@ Complete context stack for [pi](https://github.com/badlogic/pi-mono). One instal
 
 ## What's included
 
-| Layer | Package | What it does |
-|-------|---------|-------------|
-| **Memory** | [@samfp/pi-memory](https://github.com/samfoy/pi-memory) | Learns preferences, project patterns, and corrections. Injects relevant facts into every session. |
-| **Session history** | [pi-session-search](https://github.com/samfoy/pi-session-search) | Indexes past coding sessions. Search by topic to find previous work, decisions, and debugging context. |
-| **Knowledge base** | [pi-knowledge-search](https://github.com/samfoy/pi-knowledge-search) | Indexes local files (markdown, text, docs). Semantic search over your notes, documentation, and vault. |
+| Layer | Package | Bundled version | What it does |
+|-------|---------|-----------------|-------------|
+| **Memory** | [@samfp/pi-memory](https://github.com/samfoy/pi-memory) | 1.6.0 | Learns preferences, project patterns, and corrections. Injects relevant facts into every session. |
+| **Session history** | [pi-session-search](https://github.com/samfoy/pi-session-search) | 1.6.0 | Indexes past coding sessions. Search by topic to find previous work, decisions, and debugging context. |
+| **Knowledge base** | [pi-knowledge-search](https://github.com/samfoy/pi-knowledge-search) | 1.3.7 | Indexes local files (markdown, text, docs). Semantic search over your notes, documentation, and vault. |
+
+The components are bundled into the tarball, so one install pins a tested set. A scheduled workflow
+publishes a new patch release whenever a component ships a newer compatible version.
 
 Together, these give pi three layers of context about you:
 
@@ -22,9 +25,10 @@ Together, these give pi three layers of context about you:
 pi install npm:pi-total-recall
 ```
 
-That's it. All three extensions are active immediately.
+That's it. All three extensions, and the session-search skill, are active immediately.
+Installing from git works too: `pi install git:github.com/samfoy/pi-total-recall`.
 
-> **Requires Node 24+.** `pi-session-search` and `pi-knowledge-search` use SQLite FTS5 via `node:sqlite`, which is compiled into Node 24 but not Node 22. On Node 22 you'll see `Error: no such table: sessions` at startup — upgrade Node and restart pi.
+> **Requires Node 22.19+** (pi's own floor). `pi-session-search` and `pi-knowledge-search` use SQLite FTS5 via `node:sqlite`, which Node 22.19+ and every Node 24 release ship. On an older Node the components stop at startup with an error that names the problem — upgrade Node and restart pi.
 
 ## Tools
 
@@ -50,10 +54,11 @@ After installing, your agent gets these tools:
 | Tool | Description |
 |------|-------------|
 | `knowledge_search` | Semantic search over local files |
+| `kb_read` | Read an indexed note by name, relative path, or `[[wikilink]]` |
 
 ## Configuration
 
-Each component has its own configuration in `~/.pi/agent/settings.json`. See the individual package READMEs for details:
+Each component has its own configuration. See the individual package READMEs for details:
 
 ### Memory
 
@@ -67,13 +72,11 @@ Each component has its own configuration in `~/.pi/agent/settings.json`. See the
 
 ### Knowledge Search
 
-Point it at your notes directory:
+Run `/knowledge-search-setup` inside pi, or point it at your notes in `~/.pi/knowledge-search.json`:
 
 ```json
 {
-  "knowledge-search": {
-    "paths": ["~/Documents/Notes"]
-  }
+  "dirs": ["~/Documents/Notes"]
 }
 ```
 
@@ -142,9 +145,9 @@ rm -rf {project}/.pi/total-recall   # nukes memory, session-search config+index,
 If you only want one or two components, install them directly:
 
 ```bash
-pi install @samfp/pi-memory
-pi install pi-session-search
-pi install pi-knowledge-search
+pi install npm:@samfp/pi-memory
+pi install npm:pi-session-search
+pi install npm:pi-knowledge-search
 ```
 
 ## License
