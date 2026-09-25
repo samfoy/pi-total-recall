@@ -9,3 +9,11 @@ export function packEntry(stdout, name) {
   }
   return entry;
 }
+
+// Adds a `## <version>` section holding one bullet above the newest entry, or at the end
+// (after the title and any preamble) when there is no entry yet.
+export function withChangelogEntry(log, version, line) {
+  const entry = `## ${version}\n\n- ${line}\n`;
+  const at = log.search(/^## /m);
+  return at === -1 ? `${log.trimEnd()}\n\n${entry}` : `${log.slice(0, at)}${entry}\n${log.slice(at)}`;
+}

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Usage: node scripts/changelog-entry.mjs "<line>"
-// Inserts a `## <package.json version>` section holding one bullet above the newest entry.
+// Adds a `## <package.json version>` section holding one bullet to CHANGELOG.md.
 import fs from "node:fs";
+import { withChangelogEntry } from "./lib.mjs";
 
 const { version } = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const log = fs.readFileSync("CHANGELOG.md", "utf8");
-const at = log.indexOf("\n## ") + 1;
-fs.writeFileSync("CHANGELOG.md", `${log.slice(0, at)}## ${version}\n\n- ${process.argv[2]}\n\n${log.slice(at)}`);
+fs.writeFileSync("CHANGELOG.md", withChangelogEntry(fs.readFileSync("CHANGELOG.md", "utf8"), version, process.argv[2]));
