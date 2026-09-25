@@ -3,12 +3,15 @@ name: Publish
 # npm trusted publishing (OIDC): no NPM_TOKEN secret. The npm-side trust
 # relationship is keyed on this file name (publish.yml) + environment "npm".
 #
-# - release: a GitHub release publishes the tagged version.
-# - schedule / workflow_dispatch: when a bundled component has a newer release, `refresh`
-#   bumps the deps and patch version, verifies, and pushes the commit and tag to main; `publish`
-#   then checks out that tag, verifies it again and publishes. A tag pushed with GITHUB_TOKEN
-#   triggers no other workflow, which is why both paths live in one file.
-#   If publishing fails after the push, create a GitHub release for that tag to retry.
+# `publish` runs only in a run started on the tag it publishes, so the GITHUB_SHA and GITHUB_REF
+# that npm provenance records name the commit that is built and published.
+# - release: a GitHub release, other than a pre-release, publishes its tag.
+# - workflow_dispatch on a v* tag publishes that tag: `refresh` starts these runs, and
+#   `gh workflow run publish.yml --ref vX.Y.Z` retries a failed publish by hand.
+# - schedule, or workflow_dispatch on main: when a bundled component has a newer release,
+#   `refresh` bumps the deps and patch version, verifies, pushes the commit and tag to main, and
+#   dispatches this workflow on the tag. A push made with GITHUB_TOKEN starts no workflow run;
+#   a workflow_dispatch made with it does.
 on:
   release:
     types: [published]
@@ -25,13 +28,13 @@ concurrency:
 
 jobs:
   refresh:
+    # Default branch only: a dispatch on a tag is a publish, and other branches are not released.
     if: github.event_name != 'release' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # Can push to main but holds no id-token, so it cannot publish.
+    # Can push to main and dispatch the publish run, but holds no id-token, so it cannot publish.
     permissions:
       contents: write
-    outputs:
-      tag: ${{ steps.push.outputs.tag }}
+      actions: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -77,11 +80,11 @@ jobs:
       - name: Tarball ships every pi manifest path and no pi peers
         if: steps.check.outputs.specs != ''
         run: npm run check:pack
-      - name: Commit, tag and push
-        id: push
+      - name: Commit, tag, push and dispatch the publish run
         if: steps.check.outputs.specs != ''
         env:
           SPECS: ${{ steps.check.outputs.specs }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(node -p 'require("./package.json").version')
           git config user.name "github-actions[bot]"
@@ -89,26 +92,24 @@ jobs:
           git commit -am "chore(deps): bundle $SPECS, release $version"
           git tag "v$version"
           git push --atomic origin HEAD:main "v$version"
-          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "v$version"
 
-  # Publishes a GitHub release's tag, or the tag `refresh` just pushed. The explicit
-  # !cancelled() keeps a skipped `refresh` (every release event) from skipping this job.
+  # Publishes the tag this run started on. No `needs`: refresh runs only on main and this job
+  # only on a tag, so the two never both run in one run.
   publish:
-    needs: refresh
     if: >-
-      ${{ !cancelled() && (github.event_name == 'release'
-      || (needs.refresh.result == 'success' && needs.refresh.outputs.tag != '')) }}
+      ${{ !cancelled() && ((github.event_name == 'release' && !github.event.release.prerelease)
+      || (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v'))) }}
     runs-on: ubuntu-latest
     environment: npm
     permissions:
       contents: read
       id-token: write
     env:
-      TAG: ${{ needs.refresh.outputs.tag || github.ref_name }}
+      TAG: ${{ github.ref_name }}
     steps:
+      # Without a `ref` input, checkout takes github.ref at github.sha: the commit provenance names.
       - uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.refresh.outputs.tag || github.ref }}
       - uses: actions/setup-node@v5
         with:
           node-version: 24

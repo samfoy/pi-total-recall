@@ -31,10 +31,11 @@ pushed it. 1.9.0 is built from `main` and supersedes both.
   A repo `.npmrc` now sets `legacy-peer-deps`, as pi's own npm installs do. pi supplies these
   packages at runtime.
 - Publishing works again. `.github/workflows/publish.yml` publishes through npm trusted publishing
-  on a GitHub release. Its daily run bumps the bundled components and pushes a patch release's commit
-  and tag; a separate job, the only one holding `id-token: write`, then publishes that tag. CI and
-  publishing both pin npm `^11.5.1`. It replaces `auto-update-deps.yml`, whose npm token had stopped
-  working.
+  on a GitHub release (not a pre-release) or a `workflow_dispatch` on a `v*` tag. Its daily run bumps
+  the bundled components, pushes a patch release's commit and tag, and dispatches the workflow on that
+  tag, so every publish runs on its tag and the provenance names the commit it was built from. A
+  separate job, the only one holding `id-token: write`, publishes. CI and publishing both pin npm
+  `^11.5.1`. It replaces `auto-update-deps.yml`, whose npm token had stopped working.
 - The tarball no longer ships `scripts/`. It holds `README.md`, `CHANGELOG.md`, `LICENSE`,
   `package.json` and the bundle.
 

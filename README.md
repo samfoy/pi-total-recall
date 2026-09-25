@@ -150,6 +150,21 @@ pi install npm:pi-session-search
 pi install npm:pi-knowledge-search
 ```
 
+## Releasing
+
+`.github/workflows/publish.yml` publishes through npm trusted publishing. Its `publish` job runs
+only in a run started on the `vX.Y.Z` tag it publishes, so npm's provenance names the tagged commit,
+and it refuses a tag that doesn't match the `version` in `package.json`.
+
+- **Automatic:** the daily run bumps the bundled components when one has a newer compatible
+  release, pushes the patch release's commit and tag to `main`, and dispatches the workflow on
+  that tag.
+- **By hand:** push a commit that sets `version` and adds its CHANGELOG entry, tag it `vX.Y.Z`,
+  and publish a GitHub release for the tag. Pre-releases don't publish.
+- **Retry:** if a publish fails, `gh workflow run publish.yml --ref vX.Y.Z` runs it again on that
+  tag. It works for tags that contain this workflow (v1.9.0 onward); npm refuses a version it
+  already has.
+
 ## License
 
 MIT
