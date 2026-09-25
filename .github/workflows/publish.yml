@@ -36,7 +36,10 @@ jobs:
       contents: write
       actions: write
     steps:
+      # Third-party install scripts and tests run in this job; only the push step gets the token.
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -61,13 +64,24 @@ jobs:
           git diff --stat
       # `npm view` exits non-zero on a network error as well as on a 404, so read the full
       # version list: an unreachable registry then fails this step instead of passing it.
+      # The check exits 3 for "published" and 0 for "not yet"; any other exit, such as node
+      # throwing on output that isn't a version list, fails the step as well.
       - name: New version is not on npm yet
         if: steps.check.outputs.specs != ''
         run: |
           version=$(node -p 'require("./package.json").version')
           published=$(npm view pi-total-recall versions --json)
-          if node -e 'process.exit([].concat(JSON.parse(process.argv[1])).includes(process.argv[2]) ? 0 : 1)' "$published" "$version"; then
+          rc=0
+          node -e '
+            const list = [].concat(JSON.parse(process.argv[1]));
+            if (!list.length || !list.every((v) => typeof v === "string")) throw new Error("not a version list");
+            process.exit(list.includes(process.argv[2]) ? 3 : 0);
+          ' "$published" "$version" || rc=$?
+          if [ "$rc" -eq 3 ]; then
             echo "::error::pi-total-recall@$version is already on npm, so main is behind npm. Set package.json past the latest npm version by hand."
+            exit 1
+          elif [ "$rc" -ne 0 ]; then
+            echo "::error::Could not read the published versions of pi-total-recall (check exited $rc)."
             exit 1
           fi
       - name: Lockfile resolves only from registry.npmjs.org
@@ -89,9 +103,16 @@ jobs:
           version=$(node -p 'require("./package.json").version')
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(deps): bundle $SPECS, release $version"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(deps): bundle $SPECS, release $version"
+          # Install scripts and tests ran in this tree; release nothing but the three files above.
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Files other than package.json, package-lock.json and CHANGELOG.md changed:"
+            git status --porcelain
+            exit 1
+          fi
           git tag "v$version"
-          git push --atomic origin HEAD:main "v$version"
+          git push --atomic "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main "v$version"
           gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "v$version"
 
   # Publishes the tag this run started on. No `needs`: refresh runs only on main and this job
@@ -120,7 +141,10 @@ jobs:
         run: test "$TAG" = "v$(node -p 'require("./package.json").version')"
       - name: Lockfile resolves only from registry.npmjs.org
         run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
-      - run: npm ci
+      # This job holds the id-token. The tree's only install scripts are dev-only: esbuild's
+      # binary check (tsx resolves the binary from @esbuild/<platform> without it) and fsevents
+      # (macOS). Tests and check:pack pass without them.
+      - run: npm ci --ignore-scripts
       - run: npm test
       - name: Tarball ships every pi manifest path and no pi peers
         run: npm run check:pack

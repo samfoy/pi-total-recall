@@ -33,9 +33,11 @@ pushed it. 1.9.0 is built from `main` and supersedes both.
 - Publishing works again. `.github/workflows/publish.yml` publishes through npm trusted publishing
   on a GitHub release (not a pre-release) or a `workflow_dispatch` on a `v*` tag. Its daily run bumps
   the bundled components, pushes a patch release's commit and tag, and dispatches the workflow on that
-  tag, so every publish runs on its tag and the provenance names the commit it was built from. A
-  separate job, the only one holding `id-token: write`, publishes. CI and publishing both pin npm
-  `^11.5.1`. It replaces `auto-update-deps.yml`, whose npm token had stopped working.
+  tag, so every publish runs on its tag and the provenance names the commit it was built from. The
+  job that resolves new dependency versions (`npm update`) has no publish rights; the publish job
+  still installs and tests the locked tree, with install scripts off (`npm ci --ignore-scripts`).
+  CI and publishing both pin npm `^11.5.1`. It replaces `auto-update-deps.yml`, whose npm token had
+  stopped working.
 - The tarball no longer ships `scripts/`. It holds `README.md`, `CHANGELOG.md`, `LICENSE`,
   `package.json` and the bundle.
 
@@ -44,3 +46,13 @@ pushed it. 1.9.0 is built from `main` and supersedes both.
 - A test that every `pi` manifest path exists after `npm install` and covers every resource each
   component declares, and `npm run check:pack`, which checks the packed tarball for the same paths
   and for bundled pi peers or build tools. CI and both publish paths run them.
+
+### Known limitations
+
+- The daily refresh's `npm update` takes the newest in-range version of every transitive
+  dependency, with no cooldown or minimum age, and the release it makes publishes unattended.
+- The workflow's concurrency group keeps at most one pending run. A run queued while another is
+  pending cancels the pending one, so a dispatched publish can be cancelled before it starts. Retry
+  it with `gh workflow run publish.yml --ref vX.Y.Z`.
+- GitHub disables scheduled workflows in a public repository after 60 days without repository
+  activity. The daily refresh then stops until the workflow is enabled again.
