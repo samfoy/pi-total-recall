@@ -3,10 +3,12 @@
 // packages. The scheduled dependency refresh publishes unattended, so this gates every publish.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import { packEntry } from "./lib.mjs";
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const [pack] = JSON.parse(
+const pack = packEntry(
   execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { encoding: "utf8" }),
+  pkg.name,
 );
 const files = pack.files.map((f) => f.path);
 
