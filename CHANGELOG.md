@@ -19,18 +19,22 @@ pushed it. 1.9.0 is built from `main` and supersedes both.
 
 - The bundle no longer carries `@aws-sdk` 3.750 with `fast-xml-parser` 4.4.1 (critical) and
   `uuid` 9.0.1 ([#9](https://github.com/samfoy/pi-total-recall/issues/9)). It now resolves
-  `@aws-sdk/core` 3.978.1 and contains neither package. `npm audit --omit=dev` on an install of the
-  tarball drops from 1 critical and 22 moderate to 3 moderate, all one advisory: `stream-json` 2.1.0
-  (GHSA-528h-pc64-c93x) in `pi-knowledge-search`, which uses only the parser and assembler, not the
-  affected filters.
+  `@aws-sdk/core` 3.978.1 and contains neither package. Measured on 2026-09-25 with npm 11.13,
+  `npm audit --omit=dev` reports 23 vulnerable packages (1 critical, 22 moderate) on an install of
+  `pi-total-recall@1.8.1`, and 3 moderate on an install of the 1.9.0 tarball. The issue counted 21
+  moderate on 2026-08-16; the 22nd is `stream-json`, whose advisory was published on 2026-09-03.
+  The 3 left are all that one advisory: `stream-json` 2.1.0 (GHSA-528h-pc64-c93x) in
+  `pi-knowledge-search`, which uses only the parser and assembler, not the affected filters.
 - Git installs no longer pull the components' pi peers. The old lockfile listed 167 auto-installed
   peer packages, including a whole `@mariozechner/pi-coding-agent` 0.73.1 tree, and the
   `npm install --omit=dev` behind `pi install git:github.com/samfoy/pi-total-recall` installed them.
   A repo `.npmrc` now sets `legacy-peer-deps`, as pi's own npm installs do. pi supplies these
   packages at runtime.
 - Publishing works again. `.github/workflows/publish.yml` publishes through npm trusted publishing
-  on a GitHub release, and its daily run bumps the bundled components and publishes a patch release
-  in the same run. It replaces `auto-update-deps.yml`, whose npm token had stopped working.
+  on a GitHub release. Its daily run bumps the bundled components and pushes a patch release's commit
+  and tag; a separate job, the only one holding `id-token: write`, then publishes that tag. CI and
+  publishing both pin npm `^11.5.1`. It replaces `auto-update-deps.yml`, whose npm token had stopped
+  working.
 - The tarball no longer ships `scripts/`. It holds `README.md`, `CHANGELOG.md`, `LICENSE`,
   `package.json` and the bundle.
 
