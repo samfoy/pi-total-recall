@@ -4,10 +4,11 @@ name: Publish
 # relationship is keyed on this file name (publish.yml) + environment "npm".
 #
 # - release: a GitHub release publishes the tagged version.
-# - schedule / workflow_dispatch: when a bundled component has a newer release, bump the
-#   deps and patch version, verify, commit + tag, and publish in this same run. A tag pushed
-#   with GITHUB_TOKEN triggers no other workflow, which is why both paths live in one file.
-#   If the publish step fails after the push, create a GitHub release for that tag to retry.
+# - schedule / workflow_dispatch: when a bundled component has a newer release, `refresh`
+#   bumps the deps and patch version, verifies, and pushes the commit and tag to main; `publish`
+#   then checks out that tag, verifies it again and publishes. A tag pushed with GITHUB_TOKEN
+#   triggers no other workflow, which is why both paths live in one file.
+#   If publishing fails after the push, create a GitHub release for that tag to retry.
 on:
   release:
     types: [published]
@@ -23,44 +24,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    environment: npm
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
-      # Same npm pin as ci.yml, which says why.
-      - run: npm install -g 'npm@^11.5.1'
-      - name: Tag matches package.json version
-        run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
-      - name: Lockfile resolves only from registry.npmjs.org
-        run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
-      - run: npm ci
-      - run: npm test
-      - name: Tarball ships every pi manifest path and no pi peers
-        run: npm run check:pack
-      - run: npm publish --access public
-
   refresh:
     if: github.event_name != 'release' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: npm
+    # Can push to main but holds no id-token, so it cannot publish.
     permissions:
       contents: write
-      id-token: write
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
       # Same npm pin as ci.yml, which says why.
       - run: npm install -g 'npm@^11.5.1'
       - name: Look for newer bundled component releases
@@ -74,11 +50,23 @@ jobs:
         env:
           SPECS: ${{ steps.check.outputs.specs }}
         run: |
+          # shellcheck disable=SC2086 # SPECS is a space-separated list; split it into arguments.
           npm install --save $SPECS
           npm update
           npm version patch --no-git-tag-version
           node scripts/changelog-entry.mjs "Bundle ${SPECS// /, }."
           git diff --stat
+      # `npm view` exits non-zero on a network error as well as on a 404, so read the full
+      # version list: an unreachable registry then fails this step instead of passing it.
+      - name: New version is not on npm yet
+        if: steps.check.outputs.specs != ''
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          published=$(npm view pi-total-recall versions --json)
+          if node -e 'process.exit([].concat(JSON.parse(process.argv[1])).includes(process.argv[2]) ? 0 : 1)' "$published" "$version"; then
+            echo "::error::pi-total-recall@$version is already on npm, so main is behind npm. Set package.json past the latest npm version by hand."
+            exit 1
+          fi
       - name: Lockfile resolves only from registry.npmjs.org
         if: steps.check.outputs.specs != ''
         run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
@@ -90,6 +78,7 @@ jobs:
         if: steps.check.outputs.specs != ''
         run: npm run check:pack
       - name: Commit, tag and push
+        id: push
         if: steps.check.outputs.specs != ''
         env:
           SPECS: ${{ steps.check.outputs.specs }}
@@ -99,6 +88,39 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "chore(deps): bundle $SPECS, release $version"
           git tag "v$version"
-          git push origin HEAD:main "v$version"
-      - if: steps.check.outputs.specs != ''
-        run: npm publish --access public
+          git push --atomic origin HEAD:main "v$version"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  # Publishes a GitHub release's tag, or the tag `refresh` just pushed. The explicit
+  # !cancelled() keeps a skipped `refresh` (every release event) from skipping this job.
+  publish:
+    needs: refresh
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'release'
+      || (needs.refresh.result == 'success' && needs.refresh.outputs.tag != '')) }}
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ needs.refresh.outputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.refresh.outputs.tag || github.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Same npm pin as ci.yml, which says why.
+      - run: npm install -g 'npm@^11.5.1'
+      - name: Tag matches package.json version
+        run: test "$TAG" = "v$(node -p 'require("./package.json").version')"
+      - name: Lockfile resolves only from registry.npmjs.org
+        run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
+      - run: npm ci
+      - run: npm test
+      - name: Tarball ships every pi manifest path and no pi peers
+        run: npm run check:pack
+      - run: npm publish --access public
