@@ -36,8 +36,8 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      # Trusted publishing needs npm >= 11.5.1.
-      - run: npm install -g npm@latest
+      # Same npm pin as ci.yml, which says why.
+      - run: npm install -g 'npm@^11.5.1'
       - name: Tag matches package.json version
         run: test "${GITHUB_REF_NAME}" = "v$(node -p 'require("./package.json").version')"
       - name: Lockfile resolves only from registry.npmjs.org
@@ -61,8 +61,8 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      # Trusted publishing needs npm >= 11.5.1.
-      - run: npm install -g npm@latest
+      # Same npm pin as ci.yml, which says why.
+      - run: npm install -g 'npm@^11.5.1'
       - name: Look for newer bundled component releases
         id: check
         run: node scripts/refresh-deps.mjs >> "$GITHUB_OUTPUT"

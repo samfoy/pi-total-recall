@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+      # One npm major, pinned alike in ci.yml and publish.yml; change them together. Trusted
+      # publishing needs >= 11.5.1, and npm 11 is what Node 24 bundles, so CI matches the npm that
+      # writes the lockfile locally. A floating npm@latest moved to npm 12 and broke check:pack once.
+      - run: npm install -g 'npm@^11.5.1'
       # Lockfiles generated behind a local proxy or CodeArtifact leak unreachable URLs.
       - name: Lockfile resolves only from registry.npmjs.org
         run: "! grep -E '\"resolved\": \"' package-lock.json | grep -v 'https://registry.npmjs.org/'"
