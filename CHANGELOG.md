@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1
+
+- Bundle @samfp/pi-memory@^1.6.1.
+
 ## 1.9.0
 
 GitHub `main` said 1.8.0 while npm had 1.8.1: the auto-update workflow published 1.8.1 and never
