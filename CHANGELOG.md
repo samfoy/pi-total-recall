@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.2
+
+- Bundle pi-session-search@^1.6.1, pi-knowledge-search@^1.3.8.
+
 ## 1.9.1
 
 - Bundle @samfp/pi-memory@^1.6.1.
